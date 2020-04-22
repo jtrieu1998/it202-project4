@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Corona Home</title>
+    <link rel="manifest" href="./site.webmanifest">
+  <link href="https://unpkg.com/material-components-web@v4.0.0/dist/material-components-web.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/material-components-web@v4.0.0/dist/material-components-web.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  
+  <style>
+    :root {
+      --mdc-theme-primary: #0A5;
+    }
+
+    body {margin: 0;}
+    main {margin-left: 8px;}
+    .view{
+          display: none;
+    }
+  </style>
+
+  </head>
+  <body>  
+    
+    <aside class="mdc-drawer mdc-drawer--modal">
+    <div class="mdc-drawer__content">
+      <nav class="mdc-list">
+        <a class="mdc-list-item mdc-list-item--activated" href="#" id="home-button" aria-current="page">
+          <i class="material-icons mdc-list-item__graphic" aria-hidden="true">home</i>
+          <span class="mdc-list-item__text">Home</span>
+        </a>
+        <a class="mdc-list-item" href="#" id="tables-button">
+          <i class="material-icons mdc-list-item__graphic" aria-hidden="true">tables</i>
+          <span class="mdc-list-item__text">Tables</span>
+        </a>
+        <a class="mdc-list-item" href="#" id="charts-button">
+          <i class="material-icons mdc-list-item__graphic" aria-hidden="true">charts</i>
+          <span class="mdc-list-item__text">Charts</span>
+        </a>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="mdc-drawer-scrim"></div>
+      
+<!--header bar-->
+<header class="mdc-top-app-bar">        
+  <div class="mdc-top-app-bar__row">
+    <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+      <button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button">menu</button>
+      <span class="mdc-top-app-bar__title">Corona virus tracker</span>
+    </section>
+    <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end" role="toolbar">
+      <button class="material-icons mdc-top-app-bar__action-item mdc-icon-button" aria-label="Download">file_download</button>
+      <button class="material-icons mdc-top-app-bar__action-item mdc-icon-button" aria-label="Print this page">print</button>
+      <button class="material-icons mdc-top-app-bar__action-item mdc-icon-button" aria-label="Bookmark this page">bookmark</button>
+    </section>
+  </div>
+</header>
+
+
+
+  <main class="mdc-top-app-bar--fixed-adjust">
+      <div id="home">  
+          <label for="allCountries">Choose countries from this list:</label><br/>
+          <input list="countries" id="allCountries" name="allCountries" />
+          <datalist id="countries">
+              <!--options in script-->
+          </datalist>
+          <button class="mdc-button foo-button mdc-button--raised" onClick="addCountries()">
+              <div class="mdc-button__ripple"></div>
+              <span class="mdc-button__label">Add Country</span>
+          </button>
+          <button class="mdc-button foo-button mdc-button--raised" onClick="goTables()">
+              <div class="mdc-button__ripple"></div>
+              <span class="mdc-button__label">Show Tables</span>
+          </button>
+      <div id="myCountries">
+          
+      </div>
+      </div> <!-- home ending div --> 
+      
+      
+      <div id="tables" style="display:none">
+          <h1>Confirmed Cases</h1>
+          <div id="table_div"/>
+      </div> <!-- table ending div -->
+      
+      
+      <div id="charts" style="display:none">
+          <h1>Confirmed Cases</h1>
+      </div> <!-- charts ending div -->
+  </main>
+
+
+  <script>
+    //----------------------------DATA/HOME SET UP----------------------------
+    let aCountries = "";
+    let sCountries = [];
+    let data;
+    let sData = [];
+    let rowData;
+      
+    let apiEndpoint = "https://pomber.github.io/covid19/timeseries.json";
+    fetch(apiEndpoint)
+    .then(response => {return response.json()})
+    .then(json => {
+        data = json;
+        for(let prop in json){
+            aCountries += "<option value='"+prop+"'/>";
+        }
+        document.getElementById("countries").innerHTML = aCountries;
+    }).catch(err => console.error(err));
+    if("serviceWorker" in navigator){
+        navigator.serviceWorker.register("./sw.js");
+    }
+
+    mdc.topAppBar.MDCTopAppBar.attachTo(document.querySelector('header.mdc-top-app-bar'));
+
+    const drawer = mdc.drawer.MDCDrawer.attachTo(document.querySelector('.mdc-drawer'));
+
+    document.querySelector(".mdc-top-app-bar__navigation-icon")
+        .addEventListener("click", (e) => { 
+//             console.log("drawer clicked");
+            drawer.open = true;
+    });
+    
+    mdc.ripple.MDCRipple.attachTo(document.querySelector('.foo-button'));  
+    
+    addCountries = () => {
+        let inBox = document.querySelector("#allCountries");
+        let sC = inBox.value
+        //if cBool is false the add to array
+        let cBool = false;
+        
+        //check if entry is blank or already in array
+        if(sC == ""){
+            cBool = true;
+        } else {
+            for(let c in sCountries){
+               if(sC == sCountries[c]){
+                   cBool = true;
+               }
+            }
+        }
+        
+        //if valid entry: push name of country to sCountries, push data to sData. use sData to fill table
+        if(!cBool){
+            inBox.value = "";
+            sCountries.push(sC);
+            for(d in data){
+                if(d == sC){
+                    sData[sC] = data[d];
+                }
+            }
+            //pin countries to div under input box
+            let spot = document.querySelector("#myCountries")
+            let newE = document.createElement("p")
+            newE.innerText = sC;
+            spot.appendChild(newE);
+            
+            google.charts.load('current', {'packages':['table']});
+            google.charts.setOnLoadCallback(drawTable);
+
+            //loop through sData to fill table. use sCountries to fill table title. use confirmed of each entry to fill table column
+            function drawTable() {
+              let data = new google.visualization.DataTable();
+              data.addColumn('string', 'Date');
+              for(c in sCountries){
+                  data.addColumn('string', sCountries[c]);
+              }
+              
+              let table = new google.visualization.Table(document.getElementById('table_div'));
+
+              table.draw(data, {width: '100%', height: '100%'});
+            }
+        }     
+    }    
+      
+    goTables = () => {
+        document.getElementById('home').style.display = "none";
+        document.getElementById('tables').style.display = "block";
+        document.getElementById('charts').style.display = "none";
+    }      
+
+      
+    //----------------------------TABLES SET UP----------------------------  
+//       google.charts.load('current', {'packages':['table']});
+//       google.charts.setOnLoadCallback(drawTable);
+
+//       //loop through sData to fill table. use sCountries to fill table title. use confirmed of each entry to fill table column
+//       function drawTable() {
+//         let data = new google.visualization.DataTable();
+//         data.addColumn('string', 'Date');
+//         for(c in sCountries){
+//             data.addColumn('string', sCountries[c]);
+//         }
+
+//         let table = new google.visualization.Table(document.getElementById('table_div'));
+
+//         table.draw(data, {width: '100%', height: '100%'});
+//       }
+      
+      
+//  Drawer controling pages  
+    document.querySelectorAll('.mdc-list-item').forEach(item => {
+    item.addEventListener('click', event => {
+    //handle click
+    switch (item.id) {
+      case 'home-button':
+//         document.querySelector('.mdc-top-app-bar__title').innerHTML = "Home";
+        document.querySelector('#home').style.display = "block";
+        document.getElementById('tables').style.display = "none";
+        document.getElementById('charts').style.display = "none";
+//         console.log("home button pressed");
+        drawer.open = !drawer.open;
+        break;
+      case 'tables-button':
+//         document.querySelector('.mdc-top-app-bar__title').innerHTML = "Table";
+        document.getElementById('home').style.display = "none";
+        document.getElementById('tables').style.display = "block";
+        document.getElementById('charts').style.display = "none";
+//         console.log("table button pressed");
+        drawer.open = !drawer.open;
+        break;
+      case 'charts-button':
+//         document.querySelector('.mdc-top-app-bar__title').innerHTML = "Chart";
+        document.getElementById('home').style.display = "none";
+        document.getElementById('tables').style.display = "none";
+        document.getElementById('charts').style.display = "block";
+//         console.log("chart button pressed");
+        drawer.open = !drawer.open;
+        break;
+      default:
+//         console.log("something else pressed");
+        break;
+    }
+  });
+});
+    </script>
+  </body>
+</html>
