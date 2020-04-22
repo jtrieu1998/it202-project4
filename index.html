@@ -15,7 +15,6 @@
     :root {
       --mdc-theme-primary: #0A5;
     }
-
     body {margin: 0;}
     main {margin-left: 8px;}
     .view{
@@ -87,12 +86,13 @@
       
       <div id="tables" style="display:none">
           <h1>Confirmed Cases</h1>
-          <div id="table_div"/>
+          <div id="table_div"></div>
       </div> <!-- table ending div -->
       
       
       <div id="charts" style="display:none">
-          <h1>Confirmed Cases</h1>
+          <h1>Confirmed CHARTS</h1>
+          <div id="chart_div"></div>
       </div> <!-- charts ending div -->
   </main>
 
@@ -103,7 +103,9 @@
     let sCountries = [];
     let data;
     let sData = [];
-    let rowData;
+    let tRowData = [];
+    let cRowData = [];
+    let numDates = 0;
       
     let apiEndpoint = "https://pomber.github.io/covid19/timeseries.json";
     fetch(apiEndpoint)
@@ -113,8 +115,14 @@
         for(let prop in json){
             aCountries += "<option value='"+prop+"'/>";
         }
+        numDates = data["Afghanistan"].length;
+        for(let i = 0; i < numDates; i++){
+            tRowData.push([data["Afghanistan"][i]["date"]]);
+            cRowData.push([data["Afghanistan"][i]["date"]]);
+        }
         document.getElementById("countries").innerHTML = aCountries;
     }).catch(err => console.error(err));
+    
     if("serviceWorker" in navigator){
         navigator.serviceWorker.register("./sw.js");
     }
@@ -157,6 +165,7 @@
                     sData[sC] = data[d];
                 }
             }
+
             //pin countries to div under input box
             let spot = document.querySelector("#myCountries")
             let newE = document.createElement("p")
@@ -166,19 +175,63 @@
             google.charts.load('current', {'packages':['table']});
             google.charts.setOnLoadCallback(drawTable);
 
+            //----------------------------TABLE SET UP---------------------------- 
             //loop through sData to fill table. use sCountries to fill table title. use confirmed of each entry to fill table column
             function drawTable() {
-              let data = new google.visualization.DataTable();
-              data.addColumn('string', 'Date');
+              let tdata = new google.visualization.DataTable();
+              tdata.addColumn('string', 'Date');
               for(c in sCountries){
-                  data.addColumn('string', sCountries[c]);
+                  tdata.addColumn('number', sCountries[c]);
               }
+//                 console.log(data["Afghanistan"])
+             
+              for(let i = 0; i < numDates; i++){
+                  tRowData[i].push(sData[sCountries[sCountries.length-1]][i]["confirmed"]);
+                  cRowData[i].push(sData[sCountries[sCountries.length-1]][i]["confirmed"]);
+              }
+//                       console.log(sData[sCountries[c]][i]["date"] + ", " + sData[sCountries[c]][i]["confirmed"]);
+                  
               
+              console.log("Row Data");
+              console.log(tRowData);
+              tdata.addRows(tRowData);
+              console.log(sCountries[0])
+              //a single row for one country is -> (sData[sCountries[c]][i]["confirmed"]);
               let table = new google.visualization.Table(document.getElementById('table_div'));
-
-              table.draw(data, {width: '100%', height: '100%'});
+              
+              table.draw(tdata, {width: '100%', height: '100%'});
             }
-        }     
+            
+            //----------------------------CHART SET UP----------------------------
+            google.charts.load('current', {packages: ['corechart', 'line']});
+            google.charts.setOnLoadCallback(drawCurveTypes);
+
+            function drawCurveTypes() {
+              var cData = new google.visualization.DataTable();
+              cData.addColumn('string', 'Date');
+              for(c in sCountries){
+                  cData.addColumn('number', sCountries[c]);
+              }
+              cData.addRows(tRowData);
+              var options = {
+
+                hAxis: {
+                  title: 'Date'
+                },
+                vAxis: {
+                  title: 'Confirmed Cases'
+                },
+                series: {
+                  1: {curveType: 'function'}
+                },
+                width:1000,
+                height: 500
+              };
+
+              var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+              chart.draw(cData, options);
+            }
+        } //if(!cBool)    
     }    
       
     goTables = () => {
@@ -188,22 +241,7 @@
     }      
 
       
-    //----------------------------TABLES SET UP----------------------------  
-//       google.charts.load('current', {'packages':['table']});
-//       google.charts.setOnLoadCallback(drawTable);
 
-//       //loop through sData to fill table. use sCountries to fill table title. use confirmed of each entry to fill table column
-//       function drawTable() {
-//         let data = new google.visualization.DataTable();
-//         data.addColumn('string', 'Date');
-//         for(c in sCountries){
-//             data.addColumn('string', sCountries[c]);
-//         }
-
-//         let table = new google.visualization.Table(document.getElementById('table_div'));
-
-//         table.draw(data, {width: '100%', height: '100%'});
-//       }
       
       
 //  Drawer controling pages  
